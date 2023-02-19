@@ -32,7 +32,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final controller = TextEditingController(text: initialInput);
   String output = '';
-  Hotel hotel = Hotel(roomList: [], bookedList: []);
+  Hotel hotel = Hotel();
   List<Command> commandList = [];
 
   @override
@@ -134,6 +134,14 @@ class _MyHomePageState extends State<MyHomePage> {
                 }
                 hotel.roomList.add(floor);
               }
+              for (var i = 1;
+                  i <
+                      int.parse(element.commandList[1]) *
+                              int.parse(element.commandList[2]) +
+                          1;
+                  i++) {
+                hotel.keyCard[i] = false;
+              }
               output +=
                   'Hotel created with ${element.commandList[1]} floor(s), ${element.commandList[2]} room(s) per floor.\n';
               break;
@@ -154,15 +162,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 break;
               } else {
                 hotel.roomList[floor - 1][room - 1].isBooked = true;
-                hotel.roomList[floor - 1][room - 1].roomKeyCard =
-                    hotel.keycardCount;
                 hotel.roomList[floor - 1][room - 1].bookedName =
                     element.commandList[2];
                 hotel.roomList[floor - 1][room - 1].bookedAge =
                     int.parse(element.commandList[3]);
-                output +=
-                    'Room ${element.commandList[1]} is booked by ${element.commandList[2]} with keycard number ${hotel.keycardCount}.\n';
-                hotel.keycardCount++;
+                for (int keyNumber in hotel.keyCard.keys) {
+                  if (!hotel.keyCard[keyNumber]!) {
+                    hotel.keyCard[keyNumber] = true;
+                    hotel.roomList[floor - 1][room - 1].roomKeyCard = keyNumber;
+                    output +=
+                        'Room ${element.commandList[1]} is booked by ${element.commandList[2]} with keycard number $keyNumber.\n';
+                    break;
+                  }
+                }
                 break;
               }
             } else {
@@ -184,7 +196,7 @@ class _MyHomePageState extends State<MyHomePage> {
             break;
 
           case 'checkout':
-            if (int.parse(element.commandList[1]) > hotel.keycardCount ||
+            if (int.parse(element.commandList[1]) > hotel.keyCard.length ||
                 int.parse(element.commandList[1]) < 1) {
               output +=
                   'Keycard number ${element.commandList[1]} not used yet!\n';
@@ -203,6 +215,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           null;
                       hotel.roomList[e.floorInt - 1][e.roomInt - 1].bookedAge =
                           null;
+                      hotel.keyCard[int.parse(element.commandList[1])] = false;
                       output += 'Room ${e.roomIdString} is checkout.\n';
                       break;
                     } else {
@@ -227,6 +240,12 @@ class _MyHomePageState extends State<MyHomePage> {
             }
 
             if (guest.isNotEmpty) {
+              final list = guest.toList();
+              list.sort();
+
+              print(list.toString());
+              // continue here
+
               output +=
                   '${guest.toString().substring(1, guest.toString().length - 1)}\n';
               break;
@@ -274,7 +293,56 @@ class _MyHomePageState extends State<MyHomePage> {
             }
             break;
 
+          case 'list_guest_by_floor':
+            int floor = int.parse(element.commandList[1]);
+            if (floor > hotel.roomList.length || floor <= 0) {
+              output += 'Not found any guest in floor $floor\n';
+              break;
+            }
+            Set<String> guest = {};
+            for (var room in hotel.roomList[floor - 1]) {
+              if (room.isBooked) {
+                guest.add(room.bookedName!);
+              }
+            }
+            if (guest.isNotEmpty) {
+              output +=
+                  '${guest.toString().substring(1, guest.toString().length - 1)}\n';
+              break;
+            } else {
+              output += 'Not found any guest in floor $floor\n';
+              break;
+            }
+
+          case 'checkout_guest_by_floor':
+            int floor = int.parse(element.commandList[1]);
+            if (floor > hotel.roomList.length || floor <= 0) {
+              output += 'floor $floor not correct\n';
+              break;
+            }
+
+            List<String> roomList = [];
+            for (var room in hotel.roomList[floor - 1]) {
+              if (room.isBooked) {
+                hotel.keyCard[room.roomKeyCard!] = false;
+                hotel.roomList[floor - 1][room.roomInt - 1].roomKeyCard = null;
+                hotel.roomList[floor - 1][room.roomInt - 1].isBooked = false;
+                hotel.roomList[floor - 1][room.roomInt - 1].bookedAge = null;
+                hotel.roomList[floor - 1][room.roomInt - 1].bookedName = null;
+                roomList.add(room.roomIdString);
+              }
+            }
+            output +=
+                'Room ${roomList.toString().substring(1, roomList.toString().length - 1)} are checkout.\n';
+            break;
+
+          case 'book_by_floor':
+            //
+            break;
+
           default:
+            output += 'Command not found.\n';
+            break;
         }
       } on Exception catch (e) {
         output += 'Input error $e.\n';
@@ -290,13 +358,10 @@ class Command {
 
 class Hotel {
   bool isCreated;
-  List<List<Room>> roomList;
-  List<Room> bookedList;
-  int keycardCount = 1;
-  Hotel(
-      {this.isCreated = false,
-      required this.roomList,
-      required this.bookedList});
+  List<List<Room>> roomList = [];
+  List<Room> bookedList = [];
+  Map<int, bool> keyCard = {};
+  Hotel({this.isCreated = false});
 }
 
 class Room {
@@ -330,11 +395,14 @@ String createRoomString(int floor, int room) {
 }
 
 final comparatorTable = <String, bool Function(dynamic, dynamic)>{
+  '===': (a, b) => a == b,
   '==': (a, b) => a == b,
   '=': (a, b) => a == b,
   '!=': (a, b) => a != b,
   '>': (a, b) => a > b,
   '>=': (a, b) => a >= b,
+  '=>': (a, b) => a >= b,
   '<': (a, b) => a < b,
   '<=': (a, b) => a <= b,
+  '=<': (a, b) => a <= b,
 };
