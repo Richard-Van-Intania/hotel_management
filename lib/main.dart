@@ -45,7 +45,6 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       output = '';
       calculate(value);
-      output = output.substring(0, output.length - 2);
     });
   }
 
@@ -226,15 +225,55 @@ class _MyHomePageState extends State<MyHomePage> {
                 }
               }
             }
-            output +=
-                '${guest.toString().substring(1, guest.toString().length - 1)}\n';
-            break;
+
+            if (guest.isNotEmpty) {
+              output +=
+                  '${guest.toString().substring(1, guest.toString().length - 1)}\n';
+              break;
+            } else {
+              output += 'Not found any guest\n';
+              break;
+            }
 
           case 'get_guest_in_room':
-            int floor = int.parse(element.commandList[1][0]);
-            int room = int.parse(element.commandList[1].substring(1));
-
+            String? guest;
+            for (var floorList in hotel.roomList) {
+              for (var room in floorList) {
+                if (room.isBooked &&
+                    room.roomIdString == element.commandList[1]) {
+                  guest = room.bookedName;
+                  output += '$guest\n';
+                  break;
+                }
+              }
+            }
+            if (guest == null) {
+              output += 'Room ${element.commandList[1]} not found.\n';
+              break;
+            }
             break;
+
+          case 'list_guest_by_age':
+            Set<String> guest = {};
+            for (var floorList in hotel.roomList) {
+              for (var room in floorList) {
+                if (room.isBooked &&
+                    comparatorTable[element.commandList[1]]!(
+                        room.bookedAge, int.parse(element.commandList[2]))) {
+                  guest.add(room.bookedName!);
+                  output +=
+                      '${guest.toString().substring(1, guest.toString().length - 1)}\n';
+                  break;
+                }
+              }
+            }
+            if (guest.isEmpty) {
+              output +=
+                  'Not found guest ${element.commandList[1]} ${element.commandList[2]}.\n';
+              break;
+            }
+            break;
+
           default:
         }
       } on Exception catch (e) {
@@ -289,3 +328,13 @@ String createRoomString(int floor, int room) {
     return '$floor$room';
   }
 }
+
+final comparatorTable = <String, bool Function(dynamic, dynamic)>{
+  '==': (a, b) => a == b,
+  '=': (a, b) => a == b,
+  '!=': (a, b) => a != b,
+  '>': (a, b) => a > b,
+  '>=': (a, b) => a >= b,
+  '<': (a, b) => a < b,
+  '<=': (a, b) => a <= b,
+};
