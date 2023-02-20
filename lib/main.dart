@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'constant.dart';
-
 void main() {
   runApp(const MyApp());
 }
@@ -230,7 +228,7 @@ class _MyHomePageState extends State<MyHomePage> {
             }
 
           case 'list_guest':
-            Set<String> guest = {};
+            final guest = <String>{};
             for (var list in hotel.roomList) {
               for (var e in list) {
                 if (e.isBooked) {
@@ -240,12 +238,6 @@ class _MyHomePageState extends State<MyHomePage> {
             }
 
             if (guest.isNotEmpty) {
-              final list = guest.toList();
-              list.sort();
-
-              print(list.toString());
-              // continue here
-
               output +=
                   '${guest.toString().substring(1, guest.toString().length - 1)}\n';
               break;
@@ -273,16 +265,13 @@ class _MyHomePageState extends State<MyHomePage> {
             break;
 
           case 'list_guest_by_age':
-            Set<String> guest = {};
+            final guest = <String>{};
             for (var floorList in hotel.roomList) {
               for (var room in floorList) {
                 if (room.isBooked &&
                     comparatorTable[element.commandList[1]]!(
                         room.bookedAge, int.parse(element.commandList[2]))) {
                   guest.add(room.bookedName!);
-                  output +=
-                      '${guest.toString().substring(1, guest.toString().length - 1)}\n';
-                  break;
                 }
               }
             }
@@ -290,8 +279,11 @@ class _MyHomePageState extends State<MyHomePage> {
               output +=
                   'Not found guest ${element.commandList[1]} ${element.commandList[2]}.\n';
               break;
+            } else {
+              output +=
+                  '${guest.toString().substring(1, guest.toString().length - 1)}\n';
+              break;
             }
-            break;
 
           case 'list_guest_by_floor':
             int floor = int.parse(element.commandList[1]);
@@ -299,7 +291,7 @@ class _MyHomePageState extends State<MyHomePage> {
               output += 'Not found any guest in floor $floor\n';
               break;
             }
-            Set<String> guest = {};
+            final guest = <String>{};
             for (var room in hotel.roomList[floor - 1]) {
               if (room.isBooked) {
                 guest.add(room.bookedName!);
@@ -332,13 +324,63 @@ class _MyHomePageState extends State<MyHomePage> {
                 roomList.add(room.roomIdString);
               }
             }
+
             output +=
                 'Room ${roomList.toString().substring(1, roomList.toString().length - 1)} are checkout.\n';
             break;
 
           case 'book_by_floor':
-            //
-            break;
+            if (hotel.isCreated) {
+              int floor = int.parse(element.commandList[1]);
+              bool isAllAvailable = true;
+              if (floor > hotel.roomList.length || floor < 1) {
+                output += 'Floor ${element.commandList[1]} cannot be found!\n';
+                break;
+              } else {
+                for (var room in hotel.roomList[floor - 1]) {
+                  if (room.isBooked) {
+                    isAllAvailable = false;
+                  }
+                }
+                if (isAllAvailable) {
+                  List<String> keyList = [];
+                  List<String> roomList = [];
+                  int firstAvailableKey = 1;
+
+                  while (hotel.keyCard[firstAvailableKey]!) {
+                    firstAvailableKey++;
+                  }
+
+                  for (var i = 0; i < hotel.roomList.first.length; i++) {
+                    hotel.roomList[floor - 1][i].isBooked = true;
+                    hotel.roomList[floor - 1][i].bookedName =
+                        element.commandList[2];
+                    hotel.roomList[floor - 1][i].bookedAge =
+                        int.parse(element.commandList[3]);
+                    hotel.keyCard[firstAvailableKey] = true;
+                    hotel.roomList[floor - 1][i].roomKeyCard =
+                        firstAvailableKey;
+                    keyList.add(firstAvailableKey.toString());
+                    firstAvailableKey++;
+                  }
+
+                  for (var room in hotel.roomList[floor - 1]) {
+                    roomList.add(room.roomIdString);
+                  }
+
+                  output +=
+                      'Room ${roomList.toString().substring(1, roomList.toString().length - 1)} are booked with keycard number ${keyList.toString().substring(1, keyList.toString().length - 1)}\n';
+                  break;
+                } else {
+                  output +=
+                      'Cannot book floor $floor for ${element.commandList[2]}.\n';
+                  break;
+                }
+              }
+            } else {
+              output += 'Hotel has not yet been created!\n';
+              break;
+            }
 
           default:
             output += 'Command not found.\n';
@@ -406,3 +448,26 @@ final comparatorTable = <String, bool Function(dynamic, dynamic)>{
   '<=': (a, b) => a <= b,
   '=<': (a, b) => a <= b,
 };
+
+const projectName = 'Hotel Management System by Ittipat Pattum';
+const initialInput = '''create_hotel 2 3
+book 203 Thor 32
+book 101 PeterParker 16
+book 102 StephenStrange 36
+book 201 TonyStark 48
+book 202 TonyStark 48
+book 203 TonyStark 48
+list_available_rooms
+checkout 4 TonyStark
+book 103 TonyStark 48
+book 101 Thanos 65
+checkout 1 TonyStark
+checkout 5 TonyStark
+checkout 4 TonyStark
+list_guest
+get_guest_in_room 203
+list_guest_by_age < 18
+list_guest_by_floor 2
+checkout_guest_by_floor 1
+book_by_floor 1 TonyStark 48
+book_by_floor 2 TonyStark 48''';
