@@ -39,11 +39,10 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
-  void retrieveTextCommand(String value) {
-    setState(() {
-      output = '';
-      calculate(value);
-    });
+  void retrieveTextCommand(String value) async {
+    output = '';
+    await calculate(value);
+    setState(() {});
   }
 
   @override
@@ -107,7 +106,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void calculate(String value) {
+  Future<void> calculate(String value) async {
     commandList =
         value.split('\n').map((e) => Command(e.trim().split(' '))).toList();
     for (var element in commandList) {
